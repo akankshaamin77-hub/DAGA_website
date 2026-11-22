@@ -1,84 +1,178 @@
 
+const API_BASE = "http://127.0.0.1:5000";
+
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id");
 
-const services = JSON.parse(localStorage.getItem("dagaServices")) || [];
-const owners = JSON.parse(localStorage.getItem("dagaOwners")) || [];
-
 const loggedInUser = JSON.parse(
-    localStorage.getItem("dagaLoggedInUser")
+    localStorage.getItem("dagaLoggedInUser") || "null"
 );
-
-const service = services.find(item => String(item.id) === String(serviceId));
-
-const owner = service
-    ? owners.find(item =>
-        item.email.toLowerCase() === service.ownerEmail.toLowerCase() &&
-        item.status === "Approved"
-    )
-    : null;
 
 const form = document.getElementById("serviceBookingForm");
 const message = document.getElementById("bookingFormMessage");
 const dateInput = document.getElementById("bookingDate");
 
-if (!loggedInUser) {
-    form.hidden = true;
-    message.textContent = "Please login before booking.";
-} else if (!service || !owner) {
-    form.hidden = true;
-    message.textContent = "This service is unavailable or not verified.";
-} else {
+let service = null;
+let owner = null;
+
+async function loadBookingPage() {
+
+    if (!loggedInUser) {
+        form.hidden = true;
+        message.textContent = "Please login before booking.";
+        return;
+    }
+
+    if (!loggedInUser.id) {
+        form.hidden = true;
+        message.textContent = "Tourist ID missing. Please login again.";
+        return;
+    }
+
+    try {
+        // Fetch approved services
+        const servicesResponse = await fetch(
+            `${API_BASE}/api/services`
+        );
+
+        const servicesData = await servicesResponse.json();
+
+        if (!servicesResponse.ok) {
+            throw new Error("Could not load services.");
+        }
+
+        service = servicesData.services.find(
+            item => String(item.id) === String(serviceId)
+        );
+
+        if (!service) {
+            throw new Error("Service not found or not approved.");
+        }
+
+        // Fetch business owner details
+        const ownerResponse = await fetch(
+            `${API_BASE}/api/business/profile/${service.owner_id}`
+        );
+
+        const ownerData = await ownerResponse.json();
+
+        if (!ownerResponse.ok) {
+            throw new Error("Could not load business details.");
+        }
+
+        owner = ownerData.owner;
+
+        // Set minimum booking date
+        const today = new Date();
+
+        const localToday = new Date(
+            today.getTime() - today.getTimezoneOffset() * 60000
+        ).toISOString().split("T")[0];
+
+        dateInput.min = localToday;
+
+        // Display service details
+        document.getElementById("bookingServiceName").textContent =
+            service.name;
+
+        document.getElementById("bookingBusinessName").textContent =
+            "Business: " + owner.business_name;
+
+        document.getElementById("bookingServicePrice").textContent =
+            "Price: ₹" + service.price + " / " + service.unit;
+
+        // Fill tourist details
+        document.getElementById("touristName").value =
+            loggedInUser.name || "";
+
+        document.getElementById("touristEmail").value =
+            loggedInUser.email || "";
+
+        document.getElementById("touristPhone").value =
+            loggedInUser.phone || "";
+
+        // Show booking form
+        form.hidden = false;
+
+    } catch (error) {
+        form.hidden = true;
+        message.textContent = error.message;
+    }
+}
+
+
+// Submit booking to MySQL
+form.addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    if (!service || !owner) {
+        message.textContent = "Service details are unavailable.";
+        return;
+    }
+
     const today = new Date();
+
     const localToday = new Date(
         today.getTime() - today.getTimezoneOffset() * 60000
     ).toISOString().split("T")[0];
 
-    dateInput.min = localToday;
+    if (!dateInput.value || dateInput.value < localToday) {
+        message.textContent = "Please select a valid booking date.";
+        return;
+    }
 
-    document.getElementById("bookingServiceName").textContent = service.name;
-    document.getElementById("bookingBusinessName").textContent =
-        "Business: " + owner.businessName;
-    document.getElementById("bookingServicePrice").textContent =
-        "Price: ₹" + service.price + " / " + service.unit;
+    const guests = Number(
+        document.getElementById("bookingGuests").value
+    );
 
-    document.getElementById("touristName").value = loggedInUser.name || "";
-    document.getElementById("touristEmail").value = loggedInUser.email || "";
-    document.getElementById("touristPhone").value = loggedInUser.phone || "";
+    if (!Number.isInteger(guests) || guests < 1) {
+        message.textContent = "Please enter at least one guest.";
+        return;
+    }
 
-    form.addEventListener("submit", function(event) {
-        event.preventDefault();
+    const bookingData = {
+        tourist_id: loggedInUser.id,
+        service_id: service.id,
+        booking_date: dateInput.value,
+        guests: guests,
+        tourist_name: document.getElementById("touristName").value.trim(),
+        tourist_email: loggedInUser.email,
+        tourist_phone: document.getElementById("touristPhone").value.trim(),
+        message: document.getElementById("bookingMessage").value.trim()
+    };
 
-        if (dateInput.value < localToday) {
-            message.textContent = "Please select a valid future date.";
-            return;
+    try {
+        message.textContent = "Submitting your booking...";
+
+        const response = await fetch(
+            `${API_BASE}/api/bookings`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(bookingData)
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "Booking failed.");
         }
 
-        const bookings = JSON.parse(
-            localStorage.getItem("dagaBookings")
-        ) || [];
-
-        const booking = {
-            id: "DAGA-" + Date.now(),
-            serviceId: service.id,
-            serviceName: service.name,
-            ownerEmail: owner.email,
-            businessName: owner.businessName,
-            touristName: document.getElementById("touristName").value.trim(),
-            touristEmail: loggedInUser.email,
-            touristPhone: document.getElementById("touristPhone").value.trim(),
-            date: dateInput.value,
-            guests: Number(document.getElementById("bookingGuests").value),
-            message: document.getElementById("bookingMessage").value.trim(),
-            price: service.price,
-            status: "Pending",
-            createdAt: new Date().toISOString()
-        };
-
-        bookings.push(booking);
-        localStorage.setItem("dagaBookings", JSON.stringify(bookings));
-
+        // Redirect using actual MySQL booking ID
         window.location.href =
-            "booking-confirmation.html?id=" + encodeURIComponent(booking.id);
-    });
-}
+            "booking-confirmation.html?id=" +
+            encodeURIComponent(result.booking_id);
+
+    } catch (error) {
+        message.textContent = error.message;
+    }
+
+});
+
+
+// Load service and business details
+loadBookingPage();

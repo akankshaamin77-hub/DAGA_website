@@ -40,57 +40,86 @@ function resetServiceForm() {
     cancelEditButton.hidden = true;
 }
 
-function displayServices() {
-    const ownerServices = getOwnerServices();
 
+async function displayServices() {
     managedServicesList.replaceChildren();
 
-    if (ownerServices.length === 0) {
-        const emptyMessage = document.createElement("p");
-        emptyMessage.className = "service-empty-message";
-        emptyMessage.textContent = "You haven't added any services yet.";
-        managedServicesList.appendChild(emptyMessage);
-        return;
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:5000/api/business/services/" + currentOwner.id
+        );
+
+        if (!response.ok) {
+            throw new Error("Could not load your services.");
+        }
+
+        const data = await response.json();
+        const ownerServices = data.services;
+
+        if (ownerServices.length === 0) {
+            const emptyMessage = document.createElement("p");
+            emptyMessage.className = "service-empty-message";
+            emptyMessage.textContent = "You haven't added any services yet.";
+            managedServicesList.appendChild(emptyMessage);
+            return;
+        }
+
+        ownerServices.forEach(function(service) {
+            const card = document.createElement("div");
+            card.className = "managed-service-card";
+
+            const title = document.createElement("h3");
+            title.textContent = service.name;
+
+            const category = document.createElement("p");
+            category.textContent = "Category: " + service.category;
+
+            const description = document.createElement("p");
+            description.textContent = service.description;
+
+            const price = document.createElement("p");
+            price.textContent = "Price: ₹" + service.price + " / " + service.unit;
+
+            const status = document.createElement("p");
+            status.textContent = "Status: " + service.status;
+
+            const editButton = document.createElement("button");
+            editButton.textContent = "Edit";
+            editButton.addEventListener("click", function() {
+                editService(service.id);
+            });
+
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.className = "delete-service-btn";
+            deleteButton.addEventListener("click", function() {
+                deleteService(service.id);
+            });
+
+            card.append(
+                title, category, description, price, status,
+                editButton, deleteButton
+            );
+
+            managedServicesList.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Service loading error:", error);
+
+        const message = document.createElement("p");
+        message.className = "service-empty-message";
+        message.textContent = "Could not load services. Please try again.";
+        managedServicesList.appendChild(message);
     }
-
-    ownerServices.forEach(function(service) {
-        const card = document.createElement("div");
-        card.className = "managed-service-card";
-
-        const title = document.createElement("h3");
-        title.textContent = service.name;
-
-        const category = document.createElement("p");
-        category.textContent = "Category: " + service.category;
-
-        const description = document.createElement("p");
-        description.textContent = service.description;
-
-        const price = document.createElement("p");
-        price.textContent = "Price: ₹" + service.price + " / " + service.unit;
-
-        const editButton = document.createElement("button");
-        editButton.textContent = "Edit";
-        editButton.addEventListener("click", function() {
-            editService(service.id);
-        });
-
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "Delete";
-        deleteButton.className = "delete-service-btn";
-        deleteButton.addEventListener("click", function() {
-            deleteService(service.id);
-        });
-
-        card.append(title, category, description, price, editButton, deleteButton);
-        managedServicesList.appendChild(card);
-    });
 }
 
-serviceForm.addEventListener("submit", function(event) {
+
+serviceForm.addEventListener("submit", async function(event) {
     event.preventDefault();
 
     const serviceData = {
+        owner_id: currentOwner.id,
         name: serviceName.value.trim(),
         category: serviceCategory.value,
         description: serviceDescription.value.trim(),
@@ -99,77 +128,127 @@ serviceForm.addEventListener("submit", function(event) {
     };
 
     if (!serviceData.name || !serviceData.description ||
+        !serviceData.category || !serviceData.unit ||
         serviceData.price < 0 || !Number.isFinite(serviceData.price)) {
         serviceMessage.textContent = "Please enter valid service details.";
         serviceMessage.style.color = "red";
         return;
     }
 
-    if (editingServiceId !== null) {
-        const service = allServices.find(function(item) {
-            return item.id === editingServiceId &&
-                item.ownerEmail === currentOwner.email;
+    try {
+        const url = editingServiceId !== null
+            ? "http://127.0.0.1:5000/api/business/services/" + editingServiceId
+            : "http://127.0.0.1:5000/api/business/services";
+
+        const response = await fetch(url, {
+            method: editingServiceId !== null ? "PUT" : "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(serviceData)
         });
 
-        if (!service) return;
+        const data = await response.json();
 
-        Object.assign(service, serviceData);
+        if (!response.ok) {
+            throw new Error(data.message || "Could not save service.");
+        }
 
-        serviceMessage.textContent = "Service updated successfully!";
-    } else {
-        allServices.push({
-            id: Date.now().toString(),
-            ownerEmail: currentOwner.email,
-            ...serviceData
-        });
+        serviceMessage.textContent = data.message;
+        serviceMessage.style.color = "green";
 
-        serviceMessage.textContent = "Service added successfully!";
+        resetServiceForm();
+        displayServices();
+
+    } catch (error) {
+        console.error("Service save error:", error);
+        serviceMessage.textContent = error.message;
+        serviceMessage.style.color = "red";
     }
-
-    serviceMessage.style.color = "green";
-    saveServices();
-    resetServiceForm();
-    displayServices();
 });
 
-function editService(id) {
-    const service = allServices.find(function(item) {
-        return item.id === id && item.ownerEmail === currentOwner.email;
-    });
 
-    if (!service) return;
 
-    editingServiceId = id;
+async function editService(id) {
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:5000/api/business/services/" + currentOwner.id
+        );
 
-    serviceName.value = service.name;
-    serviceCategory.value = service.category;
-    serviceDescription.value = service.description;
-    servicePrice.value = service.price;
-    serviceUnit.value = service.unit;
+        if (!response.ok) {
+            throw new Error("Could not load service details.");
+        }
 
-    serviceSubmitButton.textContent = "Update Service";
-    document.getElementById("serviceFormTitle").textContent = "Edit Service";
-    cancelEditButton.hidden = false;
+        const data = await response.json();
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+        const service = data.services.find(function(item) {
+            return Number(item.id) === Number(id);
+        });
+
+        if (!service) {
+            alert("Service not found.");
+            return;
+        }
+
+        editingServiceId = service.id;
+
+        serviceName.value = service.name;
+        serviceCategory.value = service.category;
+        serviceDescription.value = service.description;
+        servicePrice.value = service.price;
+        serviceUnit.value = service.unit;
+
+        serviceSubmitButton.textContent = "Update Service";
+        document.getElementById("serviceFormTitle").textContent = "Edit Service";
+        cancelEditButton.hidden = false;
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+    } catch (error) {
+        console.error("Edit service error:", error);
+        alert(error.message);
+    }
 }
 
-function deleteService(id) {
+
+
+async function deleteService(id) {
     const confirmDelete = confirm("Do you want to delete this service?");
 
     if (!confirmDelete) return;
 
-    allServices = allServices.filter(function(service) {
-        return !(service.id === id &&
-            service.ownerEmail === currentOwner.email);
-    });
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:5000/api/business/services/" + id,
+            {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    owner_id: currentOwner.id
+                })
+            }
+        );
 
-    saveServices();
-    displayServices();
+        const data = await response.json();
 
-    serviceMessage.textContent = "Service deleted successfully!";
-    serviceMessage.style.color = "green";
+        if (!response.ok) {
+            throw new Error(data.message || "Could not delete service.");
+        }
+
+        serviceMessage.textContent = "Service deleted successfully!";
+        serviceMessage.style.color = "green";
+
+        displayServices();
+
+    } catch (error) {
+        console.error("Delete service error:", error);
+        serviceMessage.textContent = error.message;
+        serviceMessage.style.color = "red";
+    }
 }
+
 
 cancelEditButton.addEventListener("click", resetServiceForm);
 

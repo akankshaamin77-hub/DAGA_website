@@ -1,22 +1,44 @@
 
-const owner = JSON.parse(localStorage.getItem("dagaLoggedInOwner"));
 
-if (!owner) {
+const loggedOwner = JSON.parse(localStorage.getItem("dagaLoggedInOwner"));
+
+if (!loggedOwner || !loggedOwner.id) {
     alert("Please login as a business owner.");
     window.location.href = "business-login.html";
 } else {
-    document.getElementById("dashboardBusinessName").textContent =
-        owner.businessName || "Not provided";
+    async function loadBusinessProfile() {
+        try {
+            const response = await fetch(
+                "http://127.0.0.1:5000/api/business/profile/" + loggedOwner.id
+            );
 
-    document.getElementById("dashboardLocation").textContent =
-        owner.location || "Not provided";
+            const data = await response.json();
 
-    document.getElementById("dashboardCategory").textContent =
-        owner.category || "Not provided";
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to load profile.");
+            }
 
-    document.getElementById("dashboardEmail").textContent =
-        owner.email || "Not provided";
+            const owner = data.owner;
+
+            document.getElementById("dashboardBusinessName").textContent =
+                owner.business_name || "Not provided";
+
+            document.getElementById("dashboardLocation").textContent =
+                "Not provided";
+
+            document.getElementById("dashboardCategory").textContent =
+                "Not provided";
+
+            document.getElementById("dashboardEmail").textContent =
+                owner.email || "Not provided";
+        } catch (error) {
+            console.error("Profile loading error:", error);
+        }
+    }
+
+    loadBusinessProfile();
 }
+
 
 // UPDATE BOOKING STATUS
 function updateRequest(status) {

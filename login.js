@@ -25,7 +25,7 @@ if (loginForm) {
             if (response.ok) {
                 localStorage.setItem(
                     "dagaLoggedInUser",
-                    JSON.stringify(data.user)
+                    JSON.stringify(data)
                 );
 
                 alert("Login successful!");

@@ -1,33 +1,41 @@
 
 const businessLoginForm = document.getElementById("businessLoginForm");
 
-businessLoginForm.addEventListener("submit", function(event) {
+businessLoginForm.addEventListener("submit", async function(event) {
     event.preventDefault();
 
     const email = document.getElementById("businessEmail").value.trim();
     const password = document.getElementById("businessPassword").value;
     const message = document.getElementById("businessLoginMessage");
 
-    // Get registered business owners
-    const owners = JSON.parse(localStorage.getItem("dagaOwners")) || [];
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:5000/api/business/login",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            }
+        );
 
-    // Find matching owner account
-    const loggedInOwner = owners.find(function(owner) {
-        return owner.email.toLowerCase() === email.toLowerCase()
-            && owner.password === password;
-    });
+        const data = await response.json();
 
-    if (loggedInOwner) {
+        if (!response.ok) {
+            throw new Error(data.message || "Invalid email or password.");
+        }
 
-        // Save currently logged-in owner
         localStorage.setItem(
             "dagaLoggedInOwner",
             JSON.stringify({
-                ownerName: loggedInOwner.ownerName,
-                businessName: loggedInOwner.businessName,
-                email: loggedInOwner.email,
-                category: loggedInOwner.category,
-                location: loggedInOwner.location
+                id: data.id,
+                ownerName: data.name,
+                businessName: data.business_name,
+                email: data.email
             })
         );
 
@@ -38,8 +46,10 @@ businessLoginForm.addEventListener("submit", function(event) {
             window.location.href = "business-dashboard.html";
         }, 1000);
 
-    } else {
-        message.textContent = "Invalid email or password. Please register first.";
+    } catch (error) {
+        console.error("Business login error:", error);
+
+        message.textContent = error.message || "Unable to connect to server.";
         message.style.color = "red";
     }
 });

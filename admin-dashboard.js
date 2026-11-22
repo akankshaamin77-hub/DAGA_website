@@ -15,118 +15,173 @@ function getStoredData(key) {
 }
 
 // Update dashboard statistics
-function updateAdminStats() {
-    const tourists = getStoredData("dagaUsers");
-    const owners = getStoredData("dagaOwners");
-    const services = getStoredData("dagaServices");
-    const bookings = getStoredData("dagaBookings");
 
-    const pendingBusinesses = owners.filter(function(owner) {
-        return (owner.status || "Pending").toLowerCase() === "pending";
-    });
+async function updateAdminStats() {
+    try {
+        const response = await fetch("http://127.0.0.1:5000/api/admin/dashboard");
 
-    document.getElementById("touristCount").textContent = tourists.length;
-    document.getElementById("businessCount").textContent = owners.length;
-    document.getElementById("pendingCount").textContent = pendingBusinesses.length;
-    document.getElementById("serviceCount").textContent = services.length;
-    document.getElementById("bookingCount").textContent = bookings.length;
+        if (!response.ok) {
+            throw new Error("Could not load dashboard statistics.");
+        }
+
+        const data = await response.json();
+
+        document.getElementById("touristCount").textContent = data.total_tourists;
+        document.getElementById("businessCount").textContent = data.total_business_owners;
+        document.getElementById("pendingCount").textContent = data.pending_business_owners;
+        document.getElementById("serviceCount").textContent = data.total_services;
+        document.getElementById("bookingCount").textContent = data.total_bookings;
+
+    } catch (error) {
+        console.error("Dashboard statistics error:", error);
+    }
 }
 
+
 // Display registered tourists
-function displayTourists() {
-    const tourists = getStoredData("dagaUsers");
+
+async function displayTourists() {
     const touristList = document.getElementById("touristList");
 
     touristList.replaceChildren();
 
-    if (tourists.length === 0) {
-        const empty = document.createElement("p");
-        empty.className = "admin-empty";
-        empty.textContent = "No tourists have registered yet.";
-        touristList.appendChild(empty);
-        return;
+    try {
+        const response = await fetch("http://127.0.0.1:5000/api/admin/tourists");
+
+        if (!response.ok) {
+            throw new Error("Could not load tourists.");
+        }
+
+        const tourists = await response.json();
+
+        if (tourists.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "admin-empty";
+            empty.textContent = "No tourists have registered yet.";
+            touristList.appendChild(empty);
+            return;
+        }
+
+        tourists.forEach(function(tourist) {
+            const card = document.createElement("div");
+            card.className = "admin-item";
+
+            const name = document.createElement("h3");
+            name.textContent = tourist.name || "Tourist";
+
+            const email = document.createElement("p");
+            email.textContent = "Email: " + (tourist.email || "Not provided");
+
+            const phone = document.createElement("p");
+            phone.textContent = "Phone: " + (tourist.phone || "Not provided");
+
+            card.append(name, email, phone);
+            touristList.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Tourist loading error:", error);
+
+        const message = document.createElement("p");
+        message.className = "admin-empty";
+        message.textContent = "Could not load tourists. Please try again.";
+        touristList.appendChild(message);
     }
-
-    tourists.forEach(function(tourist) {
-        const card = document.createElement("div");
-        card.className = "admin-item";
-
-        const name = document.createElement("h3");
-        name.textContent = tourist.name || "Tourist";
-
-        const email = document.createElement("p");
-        email.textContent = "Email: " + (tourist.email || "Not provided");
-
-        const phone = document.createElement("p");
-        phone.textContent = "Phone: " + (tourist.phone || "Not provided");
-
-        card.append(name, email, phone);
-        touristList.appendChild(card);
-    });
 }
 
+
 // Display registered businesses
-function displayBusinesses() {
-    const owners = getStoredData("dagaOwners");
+
+async function displayBusinesses() {
     const businessList = document.getElementById("businessList");
 
     businessList.replaceChildren();
 
-    if (owners.length === 0) {
-        const empty = document.createElement("p");
-        empty.className = "admin-empty";
-        empty.textContent = "No businesses have registered yet.";
-        businessList.appendChild(empty);
-        return;
-    }
+    try {
+        const response = await fetch("http://127.0.0.1:5000/api/admin/business-owners");
 
-    owners.forEach(function(owner) {
-        const card = document.createElement("div");
-        card.className = "admin-item";
-
-        const name = document.createElement("h3");
-        name.textContent = owner.businessName || "Business";
-
-        const ownerName = document.createElement("p");
-        ownerName.textContent = "Owner: " + (owner.ownerName || "Not provided");
-
-        const email = document.createElement("p");
-        email.textContent = "Email: " + (owner.email || "Not provided");
-
-        const phone = document.createElement("p");
-        phone.textContent = "Phone: " + (owner.phone || "Not provided");
-
-        const category = document.createElement("p");
-        category.textContent = "Category: " + (owner.category || "Not provided");
-
-        const location = document.createElement("p");
-        location.textContent = "Location: " + (owner.location || "Not provided");
-
-        const description = document.createElement("p");
-        description.textContent = "Description: " + (owner.description || "Not provided");
-
-        const statusValue = owner.status || "Pending";
-        const status = document.createElement("span");
-        status.className = "admin-status";
-
-        if (statusValue.toLowerCase() === "approved") {
-            status.classList.add("approved");
-        } else if (statusValue.toLowerCase() === "rejected") {
-            status.classList.add("rejected");
+        if (!response.ok) {
+            throw new Error("Could not load businesses.");
         }
 
-        status.textContent = "Status: " + statusValue;
+        const owners = await response.json();
 
-        card.append(
-            name,
-            ownerName,
-            email,
-            phone,
-            category,
-            location,
-            description,
-            status
-        );
+        if (owners.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "admin-empty";
+            empty.textContent = "No businesses have registered yet.";
+            businessList.appendChild(empty);
+            return;
+        }
+
+        owners.forEach(function(owner) {
+            const card = document.createElement("div");
+            card.className = "admin-item";
+
+            const name = document.createElement("h3");
+            name.textContent = owner.business_name || "Business";
+
+            const ownerName = document.createElement("p");
+            ownerName.textContent = "Owner: " + (owner.name || "Not provided");
+
+            const email = document.createElement("p");
+            email.textContent = "Email: " + (owner.email || "Not provided");
+
+            const phone = document.createElement("p");
+            phone.textContent = "Phone: " + (owner.phone || "Not provided");
+
+            const statusValue = owner.status || "Pending";
+
+            const status = document.createElement("span");
+            status.className = "admin-status";
+
+            if (statusValue.toLowerCase() === "approved") {
+                status.classList.add("approved");
+            } else if (statusValue.toLowerCase() === "rejected") {
+                status.classList.add("rejected");
+            }
+
+            status.textContent = "Status: " + statusValue;
+
+            card.append(name, ownerName, email, phone, status);
+
+            if (statusValue.toLowerCase() === "pending") {
+                const actions = document.createElement("div");
+                actions.className = "admin-actions";
+
+                const approveButton = document.createElement("button");
+                approveButton.className = "approve-btn";
+                approveButton.textContent = "Approve";
+
+                approveButton.addEventListener("click", function() {
+                    updateBusinessStatus(owner.id, "Approved");
+                });
+
+                const rejectButton = document.createElement("button");
+                rejectButton.className = "reject-btn";
+                rejectButton.textContent = "Reject";
+
+                rejectButton.addEventListener("click", function() {
+                    updateBusinessStatus(owner.id, "Rejected");
+                });
+
+                actions.append(approveButton, rejectButton);
+                card.appendChild(actions);
+            }
+
+            businessList.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Business loading error:", error);
+
+        const message = document.createElement("p");
+        message.className = "admin-empty";
+        message.textContent = "Could not load businesses. Please try again.";
+        businessList.appendChild(message);
+    }
+}
+
 
         // Show approval buttons only for pending registrations
         if (statusValue.toLowerCase() === "pending") {
@@ -137,14 +192,14 @@ function displayBusinesses() {
             approveButton.className = "approve-btn";
             approveButton.textContent = "Approve";
             approveButton.addEventListener("click", function() {
-                updateBusinessStatus(owner.email, "Approved");
+                updateBusinessStatus(owner.id, "Approved");
             });
 
             const rejectButton = document.createElement("button");
             rejectButton.className = "reject-btn";
             rejectButton.textContent = "Reject";
             rejectButton.addEventListener("click", function() {
-                updateBusinessStatus(owner.email, "Rejected");
+                updateBusinessStatus(owner.id, "Rejected");
             });
 
             actions.append(approveButton, rejectButton);
@@ -152,30 +207,14 @@ function displayBusinesses() {
         }
 
         businessList.appendChild(card);
-    });
-}
+    ;
+
 
 // Approve or reject a business
-function updateBusinessStatus(email, newStatus) {
-    if (!email) {
-        alert("Business email is missing.");
-        return;
-    }
 
-    const owners = getStoredData("dagaOwners");
-
-    const ownerIndex = owners.findIndex(function(owner) {
-        return owner.email &&
-            owner.email.toLowerCase() === email.toLowerCase();
-    });
-
-    if (ownerIndex === -1) {
-        alert("Business not found.");
-        return;
-    }
-
-    if ((owners[ownerIndex].status || "Pending").toLowerCase() !== "pending") {
-        alert("This business has already been reviewed.");
+async function updateBusinessStatus(ownerId, newStatus) {
+    if (!ownerId) {
+        alert("Business ID is missing.");
         return;
     }
 
@@ -186,16 +225,37 @@ function updateBusinessStatus(email, newStatus) {
 
     if (!confirmed) return;
 
-    owners[ownerIndex].status = newStatus;
+    try {
+        const response = await fetch(
+            "http://127.0.0.1:5000/api/admin/business-owners/" +
+            ownerId + "/status",
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    status: newStatus
+                })
+            }
+        );
 
-    localStorage.setItem("dagaOwners", JSON.stringify(owners));
+        const data = await response.json();
 
-    renderAdminDashboard();
+        if (!response.ok) {
+            throw new Error(data.message || "Could not update business status.");
+        }
 
-    alert(
-        "Business " + newStatus.toLowerCase() + " successfully."
-    );
+        alert("Business " + newStatus.toLowerCase() + " successfully.");
+
+        renderAdminDashboard();
+
+    } catch (error) {
+        console.error("Business status update error:", error);
+        alert(error.message || "Something went wrong. Please try again.");
+    }
 }
+
 
 // Render all admin dashboard content
 function renderAdminDashboard() {
