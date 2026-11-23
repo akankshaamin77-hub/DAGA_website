@@ -22,7 +22,7 @@ signupForm.addEventListener("submit", async function (event) {
         message.style.color = "blue";
 
         const response = await fetch(
-            "http://127.0.0.1:5000/api/tourist/register",
+            window.DAGA_API_BASE + "/api/tourist/register",
             {
                 method: "POST",
                 headers: {
@@ -46,7 +46,7 @@ signupForm.addEventListener("submit", async function (event) {
             signupForm.reset();
 
             setTimeout(() => {
-                window.location.href = "login.html";
+                window.location.href = "index.html";
             }, 1500);
 
         } else {

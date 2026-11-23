@@ -17,16 +17,22 @@ CORS(app)
 def get_db_connection():
     try:
         db_password = os.environ.get("DB_PASSWORD")
+        db_host = os.environ.get("DB_HOST", "127.0.0.1")
+        db_user = os.environ.get("DB_USER", "root")
+        db_name = os.environ.get("DB_NAME", "daga_db")
+        db_port = int(os.environ.get("DB_PORT", "3306"))
 
-        if db_password is None:
+        if not db_password:
             print("DB_PASSWORD environment variable is missing.")
             return None
 
         connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
+            host=db_host,
+            user=db_user,
             password=db_password,
-            database="daga_db"
+            database=db_name,
+            port=db_port,
+            connection_timeout=10
         )
 
         return connection
@@ -1476,7 +1482,7 @@ def get_business_owner_services(owner_id):
 
 if __name__ == "__main__":
     app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=True
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", "5000")),
+        debug=False
     )

@@ -18,7 +18,7 @@ function getStoredData(key) {
 
 async function updateAdminStats() {
     try {
-        const response = await fetch("http://127.0.0.1:5000/api/admin/dashboard");
+        const response = await fetch(window.DAGA_API_BASE + "/api/admin/dashboard");
 
         if (!response.ok) {
             throw new Error("Could not load dashboard statistics.");
@@ -46,7 +46,7 @@ async function displayTourists() {
     touristList.replaceChildren();
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/api/admin/tourists");
+        const response = await fetch(window.DAGA_API_BASE + "/api/admin/tourists");
 
         if (!response.ok) {
             throw new Error("Could not load tourists.");
@@ -98,7 +98,7 @@ async function displayBusinesses() {
     businessList.replaceChildren();
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/api/admin/business-owners");
+        const response = await fetch(window.DAGA_API_BASE + "/api/admin/business-owners");
 
         if (!response.ok) {
             throw new Error("Could not load businesses.");
@@ -183,33 +183,6 @@ async function displayBusinesses() {
 }
 
 
-        // Show approval buttons only for pending registrations
-        if (statusValue.toLowerCase() === "pending") {
-            const actions = document.createElement("div");
-            actions.className = "admin-actions";
-
-            const approveButton = document.createElement("button");
-            approveButton.className = "approve-btn";
-            approveButton.textContent = "Approve";
-            approveButton.addEventListener("click", function() {
-                updateBusinessStatus(owner.id, "Approved");
-            });
-
-            const rejectButton = document.createElement("button");
-            rejectButton.className = "reject-btn";
-            rejectButton.textContent = "Reject";
-            rejectButton.addEventListener("click", function() {
-                updateBusinessStatus(owner.id, "Rejected");
-            });
-
-            actions.append(approveButton, rejectButton);
-            card.appendChild(actions);
-        }
-
-        businessList.appendChild(card);
-    ;
-
-
 // Approve or reject a business
 
 async function updateBusinessStatus(ownerId, newStatus) {
@@ -227,7 +200,7 @@ async function updateBusinessStatus(ownerId, newStatus) {
 
     try {
         const response = await fetch(
-            "http://127.0.0.1:5000/api/admin/business-owners/" +
+            window.DAGA_API_BASE + "/api/admin/business-owners/" +
             ownerId + "/status",
             {
                 method: "PUT",

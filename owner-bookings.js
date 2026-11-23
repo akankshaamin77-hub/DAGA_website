@@ -14,7 +14,7 @@ if (!loggedOwner) {
 async function getMyBookings() {
     try {
         const response = await fetch(
-            "http://127.0.0.1:5000/api/bookings/business/" + loggedOwner.id
+            window.DAGA_API_BASE + "/api/bookings/business/" + loggedOwner.id
         );
 
         const bookings = await response.json();
@@ -57,7 +57,7 @@ async function updateBookingStatus(bookingId, newStatus) {
 
     try {
         const response = await fetch(
-            "http://127.0.0.1:5000/api/bookings/" + bookingId + "/status",
+            window.DAGA_API_BASE + "/api/bookings/" + bookingId + "/status",
             {
                 method: "PUT",
                 headers: {

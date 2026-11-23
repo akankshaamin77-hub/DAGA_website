@@ -1,5 +1,5 @@
 
-const API_BASE = "http://127.0.0.1:5000";
+const API_BASE = window.DAGA_API_BASE;
 
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id");

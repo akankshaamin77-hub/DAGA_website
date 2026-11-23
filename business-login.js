@@ -10,7 +10,7 @@ businessLoginForm.addEventListener("submit", async function(event) {
 
     try {
         const response = await fetch(
-            "http://127.0.0.1:5000/api/business/login",
+            window.DAGA_API_BASE + "/api/business/login",
             {
                 method: "POST",
                 headers: {

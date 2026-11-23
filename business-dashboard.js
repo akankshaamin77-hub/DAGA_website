@@ -9,7 +9,7 @@ if (!loggedOwner || !loggedOwner.id) {
     async function loadBusinessProfile() {
         try {
             const response = await fetch(
-                "http://127.0.0.1:5000/api/business/profile/" + loggedOwner.id
+                window.DAGA_API_BASE + "/api/business/profile/" + loggedOwner.id
             );
 
             const data = await response.json();

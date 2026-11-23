@@ -46,7 +46,7 @@ async function displayServices() {
 
     try {
         const response = await fetch(
-            "http://127.0.0.1:5000/api/business/services/" + currentOwner.id
+            window.DAGA_API_BASE + "/api/business/services/" + currentOwner.id
         );
 
         if (!response.ok) {
@@ -137,8 +137,8 @@ serviceForm.addEventListener("submit", async function(event) {
 
     try {
         const url = editingServiceId !== null
-            ? "http://127.0.0.1:5000/api/business/services/" + editingServiceId
-            : "http://127.0.0.1:5000/api/business/services";
+            ? window.DAGA_API_BASE + "/api/business/services/" + editingServiceId
+            : window.DAGA_API_BASE + "/api/business/services";
 
         const response = await fetch(url, {
             method: editingServiceId !== null ? "PUT" : "POST",
@@ -172,7 +172,7 @@ serviceForm.addEventListener("submit", async function(event) {
 async function editService(id) {
     try {
         const response = await fetch(
-            "http://127.0.0.1:5000/api/business/services/" + currentOwner.id
+            window.DAGA_API_BASE + "/api/business/services/" + currentOwner.id
         );
 
         if (!response.ok) {
@@ -219,7 +219,7 @@ async function deleteService(id) {
 
     try {
         const response = await fetch(
-            "http://127.0.0.1:5000/api/business/services/" + id,
+            window.DAGA_API_BASE + "/api/business/services/" + id,
             {
                 method: "DELETE",
                 headers: {

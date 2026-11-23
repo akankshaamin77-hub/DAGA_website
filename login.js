@@ -9,7 +9,7 @@ if (loginForm) {
         const password = document.getElementById("password").value;
 
         try {
-            const response = await fetch("http://127.0.0.1:5000/api/tourist/login", {
+            const response = await fetch(window.DAGA_API_BASE + "/api/tourist/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
